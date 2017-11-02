@@ -26,7 +26,38 @@ $lockerManager = new LockerManager($fLockerStore);
 
 ### Acquire, get, delete and update a lock
 
+```php
+// ..
 
+// acquire
+$lock = new Lock(
+    'Sample Lock',
+    [
+        'name' => 'John Doe',
+        'email' => 'john.doe@gmail.com',
+        'age' => 33,
+    ]
+);
+
+$lockerManager->acquire($lock);
+
+// get a lock
+$sampleLock = $lockerManager->get('sample-lock');
+
+// delete a lock
+$lockerManager->delete('sample-lock');
+
+// update a lock
+$lockerManager->update(
+    'sample-lock',
+    [
+        'name' => 'Maria Dante',
+        'email' => 'maria.dante@gmail.com',
+        'age' => 31,
+    ]
+);
+
+```
 
 ## Support
 
