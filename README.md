@@ -28,7 +28,9 @@ $lockerManager = new LockerManager($fLockerStore);
 
 This library uses [Slugify](https://github.com/cocur/slugify) to save lock keys. 
 
-Once a key is saved, this will be unique. Please consider this example:
+Once a key is saved, this will be unique. An `ExistingKeyException` will be thrown if you try to save a lock with the same key.
+
+Please consider this example:
 
 ```php
 // ..
