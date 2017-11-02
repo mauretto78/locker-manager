@@ -1,5 +1,31 @@
 # Simple Locker Manager
 
+This library is suitable for you if you need to simple lock system.
+
+## Basic Usage
+
+### Instantiate LockerManager
+
+To instantiate the LockerManager you must inject an implementation of `LockerStoreInterface`:
+
+```php
+use LockerManager\Application\LockerManager;
+use LockerManager\Infrastructure\FLockerStore;
+use LockerManager\Infrastructure\RedisLockerStore;
+use Predis\Client;
+
+// 1. Redis implementation uses PRedis Client
+$redisLockerStore = new RedisLockerStore(new Client());
+$lockerManager = new LockerManager($redisLockerStore);
+
+// 2. Filesystem implementation
+$fLockerStore = new FLockerStore('var/lock/');
+$lockerManager = new LockerManager($fLockerStore);
+
+```
+
+### Acquire, get, delete and update a lock
+
 
 
 ## Support
