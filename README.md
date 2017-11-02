@@ -26,6 +26,10 @@ $lockerManager = new LockerManager($fLockerStore);
 
 ### Acquire, get, delete and update a lock
 
+This library uses [Slugify](https://github.com/cocur/slugify) to save lock keys. 
+
+Once a key is saved, this will be unique. Please consider this example:
+
 ```php
 // ..
 
