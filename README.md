@@ -2,6 +2,12 @@
 
 This library is suitable for you if you need to simple lock system.
 
+## Installation
+
+```
+composer require mauretto78/locker-manager
+```
+
 ## Basic Usage
 
 ### Instantiate LockerManager
