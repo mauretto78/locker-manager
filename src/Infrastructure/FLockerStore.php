@@ -25,7 +25,11 @@ class FLockerStore implements LockerStoreInterface
             $lockPath = sys_get_temp_dir();
         }
 
-        if (!is_dir($lockPath) || !is_writable($lockPath)) {
+        if (!is_dir($lockPath)) {
+            mkdir($lockPath, 0755, true);
+        }
+
+        if (!is_writable($lockPath)) {
             throw new InvalidArgumentException(sprintf('The directory "%s" is not writable.', $lockPath));
         }
 
