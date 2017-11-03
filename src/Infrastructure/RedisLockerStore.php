@@ -9,6 +9,8 @@ use Predis\Client;
 
 class RedisLockerStore implements LockerStoreInterface
 {
+    const LOCK_LIST_NAME = 'lock-list';
+
     /**
      * @var Client
      */
@@ -23,50 +25,97 @@ class RedisLockerStore implements LockerStoreInterface
         $this->redis = $redis;
     }
 
+    /**
+     * @param Lock $lock
+     * @throws ExistingKeyException
+     */
     public function acquire(Lock $lock)
     {
         $key = $lock->key();
 
-        if($this->redis->exists($key) !== 0){
+        if($this->redis->hget(self::LOCK_LIST_NAME, $key)){
             throw new ExistingKeyException(sprintf('The key "%s" already exists.', $key));
         }
 
-        $this->redis->set(
+        $this->saveLock(
+            $key,
+            $lock
+        );
+    }
+
+    /**
+     * @param $key
+     * @param Lock $lock
+     */
+    private function saveLock($key, Lock $lock)
+    {
+        $this->redis->hset(
+            self::LOCK_LIST_NAME,
             $key,
             serialize($lock)
         );
     }
 
+    /**
+     * clear all locks
+     */
+    public function clear()
+    {
+        $this->redis->del([self::LOCK_LIST_NAME]);
+    }
+
+    /**
+     * @param $key
+     * @throws NotExistingKeyException
+     */
     public function delete($key)
     {
         if(!$this->exists($key)){
             throw new NotExistingKeyException(sprintf('The key "%s" does not exists.', $key));
         }
 
-        $this->redis->del($key);
+        $this->redis->hdel(self::LOCK_LIST_NAME, $key);
     }
 
+    /**
+     * @param $key
+     * @return bool
+     */
     public function exists($key)
     {
-        if($this->redis->exists($key) === 0){
-            return false;
-        }
-
-        return true;
+        return ($this->redis->hget(self::LOCK_LIST_NAME, $key)) ? true : false;
     }
 
+    /**
+     * @param $key
+     * @return mixed
+     * @throws NotExistingKeyException
+     */
     public function get($key)
     {
         if(!$this->exists($key)){
             throw new NotExistingKeyException(sprintf('The key "%s" does not exists.', $key));
         }
 
-        return unserialize($this->redis->get($key));
+        return unserialize($this->redis->hget(self::LOCK_LIST_NAME, $key));
     }
 
+    /**
+     * @return array
+     */
+    public function getAll()
+    {
+        return $this->redis->hgetall(self::LOCK_LIST_NAME);
+    }
+
+    /**
+     * @param $key
+     * @param $payload
+     * @throws NotExistingKeyException
+     */
     public function update($key, $payload)
     {
-        if($this->redis->exists($key) === 0){
+        if(!$this->redis->hget(self::LOCK_LIST_NAME, $key)){
             throw new NotExistingKeyException(sprintf('The key "%s" does not exists.', $key));
         }
 
@@ -74,9 +123,11 @@ class RedisLockerStore implements LockerStoreInterface
         $lock = $this->get($key);
         $lock->update($payload);
 
-        $this->redis->set(
+        $this->saveLock(
             $key,
-            serialize($lock)
+            $lock
         );
     }
+
+
 }

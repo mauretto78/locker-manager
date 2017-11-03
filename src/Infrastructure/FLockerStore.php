@@ -32,6 +32,10 @@ class FLockerStore implements LockerStoreInterface
         $this->lockPath = $lockPath;
     }
 
+    /**
+     * @param Lock $lock
+     * @throws ExistingKeyException
+     */
     public function acquire(Lock $lock)
     {
         $key = $lock->key();
@@ -41,11 +45,46 @@ class FLockerStore implements LockerStoreInterface
             throw new ExistingKeyException(sprintf('The key "%s" already exists.', $key));
         }
 
-        $file = @fopen($fileName,'x');
-        fwrite($file, serialize($lock));
+        $this->save($lock, $fileName);
+    }
+
+    /**
+     * @param Lock $lock
+     * @param $fileName
+     * @throws LockingKeyException
+     */
+    private function save(Lock $lock, $fileName)
+    {
+        $file = @fopen($fileName,'w');
+
+        if (flock($file,LOCK_EX)) {
+            fwrite($file, serialize($lock));
+            flock($file,LOCK_UN);
+        } else {
+            throw new LockingKeyException(sprintf('Error locking file "%s".', $lock->key()));
+        }
+
         fclose($file);
     }
 
+    /**
+     * clear all locks
+     */
+    public function clear()
+    {
+        $files = scandir($this->lockPath);
+
+        foreach($files as $file){
+            if(is_file($this->lockPath.$file)) {
+                unlink($this->lockPath.$file);
+            }
+        }
+    }
+
+    /**
+     * @param $key
+     * @throws NotExistingKeyException
+     */
     public function delete($key)
     {
         if(!$this->exists($key)){
@@ -55,6 +94,10 @@ class FLockerStore implements LockerStoreInterface
         unlink($this->getLockPath($key));
     }
 
+    /**
+     * @param $key
+     * @return bool
+     */
     public function exists($key)
     {
         if(!@fopen($this->getLockPath($key),'r')){
@@ -64,11 +107,20 @@ class FLockerStore implements LockerStoreInterface
         return true;
     }
 
+    /**
+     * @param $key
+     * @return string
+     */
     private function getLockPath($key)
     {
         return $this->lockPath.$key.'.lock';
     }
 
+    /**
+     * @param $key
+     * @return mixed
+     * @throws NotExistingKeyException
+     */
     public function get($key)
     {
         if(!$this->exists($key)){
@@ -78,6 +130,30 @@ class FLockerStore implements LockerStoreInterface
         return unserialize(file_get_contents($this->getLockPath($key)));
     }
 
+    /**
+     * @return array
+     */
+    public function getAll()
+    {
+        $files = scandir($this->lockPath);
+        $locks = [];
+
+        unset($files[0]);
+        unset($files[1]);
+
+        foreach ($files as $lock){
+            $locks[] = str_replace('.lock', '', $lock);
+        }
+
+        return array_values($locks);
+    }
+
+    /**
+     * @param $key
+     * @param $payload
+     * @throws LockingKeyException
+     * @throws NotExistingKeyException
+     */
     public function update($key, $payload)
     {
         $fileName = $this->getLockPath($key);
@@ -90,15 +166,6 @@ class FLockerStore implements LockerStoreInterface
         $lock = $this->get($key);
         $lock->update($payload);
 
-        $file = @fopen($fileName,'w+');
-
-        if (flock($file,LOCK_EX)) {
-            fwrite($file, serialize($lock));
-            flock($file,LOCK_UN);
-        } else {
-            throw new LockingKeyException(sprintf('Error locking file "%s".', $key));
-        }
-
-        fclose($file);
+        $this->save($lock, $fileName);
     }
 }

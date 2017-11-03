@@ -71,6 +71,26 @@ $lockerManager->update(
 
 ```
 
+### Get all locks
+
+To get all saved locks as an array:
+
+```php
+// ..
+
+$lockerManager->getAll();
+```
+
+### Clear all locks
+
+To clear all locks:
+
+```php
+// ..
+
+$lockerManager->clear();
+```
+
 ## Support
 
 If you found an issue or had an idea please refer [to this section](https://github.com/mauretto78/locker-manager/issues).

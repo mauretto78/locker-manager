@@ -147,6 +147,44 @@ class LockerManagerTest extends TestCase
 
     /**
      * @test
+     */
+    public function it_should_return_the_correct_lock_count()
+    {
+        /** @var LockerManager $lockerManager */
+        foreach ($this->lockerManagers as $lockerManager){
+            $lock1 = new Lock(
+                'Sample Lock 1',
+                [
+                    'name' => 'John Doe',
+                    'email' => 'john.doe@gmail.com',
+                    'age' => 33,
+                ]
+            );
+
+            $lock2 = new Lock(
+                'Sample Lock 2',
+                [
+                    'name' => 'Maria Dante',
+                    'email' => 'maria.dante@gmail.com',
+                    'age' => 31,
+                ]
+            );
+
+            $lockerManager->delete('existing-lock');
+
+            $lockerManager->acquire($lock1);
+            $lockerManager->acquire($lock2);
+
+            $this->assertCount(2, $lockerManager->getAll());
+
+            $lockerManager->clear();
+
+            $this->assertCount(0, $lockerManager->getAll());
+        }
+    }
+
+    /**
+     * @test
      * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
      */
     public function it_should_throw_NotExistingKeyException_if_try_to_update_an_not_existing_key_with_RedisLockerStore()
