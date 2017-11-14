@@ -1,4 +1,12 @@
 <?php
+/**
+ * This file is part of the LockerManager package.
+ *
+ * (c) Mauro Cassani<https://github.com/mauretto78>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace LockerManager\Tests;
 
@@ -33,7 +41,7 @@ class LockerManagerTest extends TestCase
     public function it_should_return_false_if_a_not_existing_lock_exists()
     {
         /** @var LockerManager $lockerManager */
-        foreach ($this->lockerManagers as $lockerManager){
+        foreach ($this->lockerManagers as $lockerManager) {
             $this->assertFalse($lockerManager->exists('a not existing key'));
         }
     }
@@ -110,7 +118,9 @@ class LockerManagerTest extends TestCase
     public function it_should_write_and_update_and_get_and_delete_a_lock()
     {
         /** @var LockerManager $lockerManager */
-        foreach ($this->lockerManagers as $lockerManager){
+        foreach ($this->lockerManagers as $lockerManager) {
+            $lockName = 'Sample Lock';
+
             $payload = [
                 'name' => 'John Doe',
                 'email' => 'john.doe@gmail.com',
@@ -118,13 +128,13 @@ class LockerManagerTest extends TestCase
             ];
 
             $lock = new Lock(
-                'Sample Lock',
+                $lockName,
                 $payload
             );
 
             $lockerManager->acquire($lock);
 
-            $this->assertEquals($lock, $lockerManager->get('sample-lock'));
+            $this->assertEquals($lock, $lockerManager->get($lockName));
 
             $newPayload = [
                 'name' => 'Maria Dante',
@@ -133,15 +143,15 @@ class LockerManagerTest extends TestCase
             ];
 
             $lockerManager->update(
-                'sample-lock',
+                $lockName,
                 $newPayload
             );
 
-            $this->assertEquals($lock->id(), $lockerManager->get('sample-lock')->id());
-            $this->assertEquals($lock->createdAt()->getTimestamp(), $lockerManager->get('sample-lock')->createdAt()->getTimestamp());
-            $this->assertEquals($newPayload, $lockerManager->get('sample-lock')->payload());
+            $this->assertEquals($lock->id(), $lockerManager->get($lockName)->id());
+            $this->assertEquals($lock->createdAt()->getTimestamp(), $lockerManager->get($lockName)->createdAt()->getTimestamp());
+            $this->assertEquals($newPayload, $lockerManager->get($lockName)->payload());
 
-            $lockerManager->delete('sample-lock');
+            $lockerManager->delete($lockName);
         }
     }
 
@@ -151,7 +161,7 @@ class LockerManagerTest extends TestCase
     public function it_should_return_the_correct_lock_count()
     {
         /** @var LockerManager $lockerManager */
-        foreach ($this->lockerManagers as $lockerManager){
+        foreach ($this->lockerManagers as $lockerManager) {
             $lock1 = new Lock(
                 'Sample Lock 1',
                 [

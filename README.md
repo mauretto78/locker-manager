@@ -1,5 +1,10 @@
 # Simple Locker Manager
 
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/mauretto78/locker-manager/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/mauretto78/locker-manager/?branch=master)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/b0278e2b5b9b4feb8f9078326d3721fd)](https://www.codacy.com/app/mauretto78/locker-manager?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=mauretto78/locker-manager&amp;utm_campaign=Badge_Grade)
+[![license](https://img.shields.io/github/license/mauretto78/simple-event-store-manager.svg)]()
+[![Packagist](https://img.shields.io/packagist/v/mauretto78/simple-event-store-manager.svg)]()
+
 This library is suitable for you if you need to simple lock system.
 
 ## Installation
@@ -54,14 +59,14 @@ $lock = new Lock(
 $lockerManager->acquire($lock);
 
 // get a lock
-$sampleLock = $lockerManager->get('sample-lock');
+$sampleLock = $lockerManager->get('Sample Lock');
 
 // delete a lock
-$lockerManager->delete('sample-lock');
+$lockerManager->delete('Sample Lock');
 
 // update a lock
 $lockerManager->update(
-    'sample-lock',
+    'Sample Lock',
     [
         'name' => 'Maria Dante',
         'email' => 'maria.dante@gmail.com',

@@ -1,7 +1,16 @@
 <?php
+/**
+ * This file is part of the LockerManager package.
+ *
+ * (c) Mauro Cassani<https://github.com/mauretto78>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace LockerManager\Infrastructure;
 
+use Cocur\Slugify\Slugify;
 use LockerManager\Domain\Lock;
 use LockerManager\Infrastructure\Exception\ExistingKeyException;
 use LockerManager\Infrastructure\Exception\InvalidArgumentException;
@@ -45,7 +54,7 @@ class FLockerStore implements LockerStoreInterface
         $key = $lock->key();
         $fileName = $this->getLockPath($key);
 
-        if(file_exists($fileName)){
+        if (file_exists($fileName)) {
             throw new ExistingKeyException(sprintf('The key "%s" already exists.', $key));
         }
 
@@ -59,11 +68,11 @@ class FLockerStore implements LockerStoreInterface
      */
     private function save(Lock $lock, $fileName)
     {
-        $file = @fopen($fileName,'w');
+        $file = @fopen($fileName, 'w');
 
-        if (flock($file,LOCK_EX)) {
+        if (flock($file, LOCK_EX)) {
             fwrite($file, serialize($lock));
-            flock($file,LOCK_UN);
+            flock($file, LOCK_UN);
         } else {
             throw new LockingKeyException(sprintf('Error locking file "%s".', $lock->key()));
         }
@@ -78,8 +87,8 @@ class FLockerStore implements LockerStoreInterface
     {
         $files = scandir($this->lockPath);
 
-        foreach($files as $file){
-            if(is_file($this->lockPath.$file)) {
+        foreach ($files as $file) {
+            if (is_file($this->lockPath.$file)) {
                 unlink($this->lockPath.$file);
             }
         }
@@ -91,7 +100,7 @@ class FLockerStore implements LockerStoreInterface
      */
     public function delete($key)
     {
-        if(!$this->exists($key)){
+        if (!$this->exists($key)) {
             throw new NotExistingKeyException(sprintf('The key "%s" does not exists.', $key));
         }
 
@@ -104,7 +113,7 @@ class FLockerStore implements LockerStoreInterface
      */
     public function exists($key)
     {
-        if(!@fopen($this->getLockPath($key),'r')){
+        if (!@fopen($this->getLockPath($key), 'r')) {
             return false;
         }
 
@@ -117,7 +126,7 @@ class FLockerStore implements LockerStoreInterface
      */
     private function getLockPath($key)
     {
-        return $this->lockPath.$key.'.lock';
+        return $this->lockPath.(new Slugify())->slugify($key).'.lock';
     }
 
     /**
@@ -127,7 +136,7 @@ class FLockerStore implements LockerStoreInterface
      */
     public function get($key)
     {
-        if(!$this->exists($key)){
+        if (!$this->exists($key)) {
             throw new NotExistingKeyException(sprintf('The key "%s" does not exists.', $key));
         }
 
@@ -145,7 +154,7 @@ class FLockerStore implements LockerStoreInterface
         unset($files[0]);
         unset($files[1]);
 
-        foreach ($files as $lock){
+        foreach ($files as $lock) {
             $locks[] = str_replace('.lock', '', $lock);
         }
 
@@ -162,7 +171,7 @@ class FLockerStore implements LockerStoreInterface
     {
         $fileName = $this->getLockPath($key);
 
-        if(!file_exists($fileName)){
+        if (!file_exists($fileName)) {
             throw new NotExistingKeyException(sprintf('The key "%s" does not exists.', $key));
         }
 
