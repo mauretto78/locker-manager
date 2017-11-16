@@ -17,21 +17,42 @@ composer require mauretto78/locker-manager
 
 ### Instantiate LockerManager
 
-To instantiate the LockerManager you must inject an implementation of `LockerStoreInterface`:
+To instantiate the LockerManager you must inject an implementation of `LockerStoreInterface`. You can use:
+
+* `FLockerStore`
+* `PdoLockerStore`
+* `RedisLockerStore`
+
+Take a look:
 
 ```php
 use LockerManager\Application\LockerManager;
 use LockerManager\Infrastructure\FLockerStore;
+use LockerManager\Infrastructure\PdoLockerStore;
 use LockerManager\Infrastructure\RedisLockerStore;
 use Predis\Client;
 
-// 1. Redis implementation uses PRedis Client
-$redisLockerStore = new RedisLockerStore(new Client());
-$lockerManager = new LockerManager($redisLockerStore);
-
-// 2. Filesystem implementation
+// Filesystem implementation
 $fLockerStore = new FLockerStore('var/lock/');
 $lockerManager = new LockerManager($fLockerStore);
+
+```
+
+```php
+// ..
+
+// PDO implementation 
+$pdoLockerStore = new PdoLockerStore(new \PDO($config));
+$lockerManager = new LockerManager($pdoLockerStore);
+
+```
+
+```php
+// ..
+
+// Redis implementation uses PRedis Client
+$redisLockerStore = new RedisLockerStore(new Client($config));
+$lockerManager = new LockerManager($redisLockerStore);
 
 ```
 

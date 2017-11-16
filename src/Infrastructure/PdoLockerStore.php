@@ -43,11 +43,8 @@ class PdoLockerStore implements LockerStoreInterface
     {
         $query = "CREATE TABLE IF NOT EXISTS `".self::LOCKERSTORE_TABLE_NAME."` (
           `id` int(11) NOT NULL AUTO_INCREMENT,
-          `uuid` char(36) COLLATE utf8_unicode_ci NOT NULL COMMENT '(DC2Type:guid)',
-          `key` varchar(255) DEFAULT NULL,
-          `payload` varchar(255) DEFAULT NULL,
-          `created_at` datetime(6),
-          `modified_at` datetime(6),
+          `key` varchar(255) NOT NULL UNIQUE,
+          `body` text DEFAULT NULL,
           PRIMARY KEY (`id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
 
@@ -59,33 +56,48 @@ class PdoLockerStore implements LockerStoreInterface
      */
     public function acquire(Lock $lock)
     {
-        $uuid = (string) $lock->id();
-        $key = $lock->key();
-        $payload = serialize($lock->payload());
-        $createdAt = $lock->createdAt()->format('Y-m-d H:i:s.u');
-        $modifiedAt = $lock->modifiedAt()->format('Y-m-d H:i:s.u');
-
         $sql = 'INSERT INTO `'.self::LOCKERSTORE_TABLE_NAME.'` (
-                    `uuid`,
                     `key`,
-                    `payload`,
-                    `created_at`,
-                    `modified_at`
+                    `body`
                   ) VALUES (
-                    :uuid,
                     :key,
-                    :payload,
-                    :created_at,
-                    :modified_at
+                    :body
             )';
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindParam(':uuid', $uuid);
-        $stmt->bindParam(':key', $key);
-        $stmt->bindParam(':payload', serialize($payload));
-        $stmt->bindParam(':created_at', $createdAt);
-        $stmt->bindParam(':modified_at', $modifiedAt);
-        $stmt->execute();
+        $data = [
+            'key' => $lock->key(),
+            'body' => serialize($lock)
+        ];
+
+        $this->executeQueryInATransaction($sql, $data);
+    }
+
+    /**
+     * @param $sql
+     * @param array|null $data
+     */
+    private function executeQueryInATransaction($sql, array $data = null)
+    {
+        try {
+            $this->pdo->setAttribute(\PDO::ATTR_ERRMODE,\PDO::ERRMODE_EXCEPTION);
+            $this->pdo->beginTransaction();
+
+            $stmt = $this->pdo->prepare($sql);
+
+            if ($data) {
+                foreach ($data as $key => &$value){
+                    $stmt->bindParam(':'.$key, $value);
+                }
+            }
+
+            $stmt->execute();
+
+            $this->pdo->commit();
+        } catch(\PDOException $e){
+            $this->pdo->rollBack();
+
+            throw $e;
+        }
     }
 
     /**
@@ -94,8 +106,8 @@ class PdoLockerStore implements LockerStoreInterface
     public function clear()
     {
         $sql = 'DELETE FROM `'.self::LOCKERSTORE_TABLE_NAME.'`';
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute();
+
+        $this->executeQueryInATransaction($sql);
     }
 
     /**
@@ -110,9 +122,12 @@ class PdoLockerStore implements LockerStoreInterface
 
         $key = (new Slugify())->slugify($key);
         $sql = 'DELETE FROM `'.self::LOCKERSTORE_TABLE_NAME.'` WHERE `key` = :key';
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindParam(':key', $key);
-        $stmt->execute();
+
+        $data = [
+            'key' => $key
+        ];
+
+        $this->executeQueryInATransaction($sql, $data);
     }
 
     /**
@@ -143,21 +158,19 @@ class PdoLockerStore implements LockerStoreInterface
 
         $key = (new Slugify())->slugify($key);
         $query = 'SELECT
-                  `id`,
-                  `uuid`,
                   `key`,
-                  `payload`,
-                  `created_at`,
-                  `modified_at`,
+                  `body`
                 FROM `'.self::LOCKERSTORE_TABLE_NAME.'` 
                 WHERE `key` = :key';
         $stmt = $this->pdo->prepare($query);
         $stmt->bindParam(':key', $key);
         $stmt->execute();
 
-        $row = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $row = $stmt->fetchAll(
+            \PDO::FETCH_ASSOC
+        );
 
-        return $row[0];
+        return unserialize($row[0]['body']);
     }
 
     /**
@@ -166,22 +179,40 @@ class PdoLockerStore implements LockerStoreInterface
     public function getAll()
     {
         $query = 'SELECT
-                  `id`,
-                  `uuid`,
                   `key`,
-                  `payload`,
-                  `created_at`,
-                  `modified_at`,
-                FROM `'.self::LOCKERSTORE_TABLE_NAME.'` 
-                ORDER BY `created_at` ASC';
+                  `body`
+                FROM `'.self::LOCKERSTORE_TABLE_NAME.'`';
         $stmt = $this->pdo->prepare($query);
         $stmt->execute();
 
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    /**
+     * @param $key
+     * @param $payload
+     *
+     * @throws NotExistingKeyException
+     */
     public function update($key, $payload)
     {
-        //UPDATE MyGuests SET lastname='Doe' WHERE id=2
+        if (!$this->exists($key)) {
+            throw new NotExistingKeyException(sprintf('The key "%s" does not exists.', $key));
+        }
+
+        /** @var Lock $lock */
+        $lock = $this->get($key);
+        $lock->update($payload);
+
+        $sql = "UPDATE `".self::LOCKERSTORE_TABLE_NAME."` 
+                SET `body` = :lock 
+                WHERE `key` = :key";
+
+        $data = [
+            'key' => $lock->key(),
+            'lock' => serialize($lock)
+        ];
+
+        $this->executeQueryInATransaction($sql, $data);
     }
 }

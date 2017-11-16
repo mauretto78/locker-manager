@@ -17,6 +17,7 @@ use LockerManager\Infrastructure\PdoLockerStore;
 use LockerManager\Infrastructure\RedisLockerStore;
 use PHPUnit\Framework\TestCase;
 use Predis\Client;
+use Symfony\Component\Yaml\Yaml;
 
 class LockerManagerTest extends TestCase
 {
@@ -27,14 +28,16 @@ class LockerManagerTest extends TestCase
 
     protected function setUp()
     {
+        $config = Yaml::parse(file_get_contents(__DIR__.'/../config/parameters.yml'));
+
         $redisLockerStore = new RedisLockerStore(new Client());
         $fLockerStore = new FLockerStore('var/lock/');
-        $pdoLockerStore = new PdoLockerStore(new \PDO('mysql:host=localhost;dbname=locker', 'root', '@Mauretto78'));
+        $pdoLockerStore = new PdoLockerStore(new \PDO($config['pdo']['driver'].':host='.$config['pdo']['host'].';dbname='.$config['pdo']['database'], $config['pdo']['username'], $config['pdo']['password']));
 
         $this->lockerManagers = [
-//            'RedisLockerStore' => new LockerManager($redisLockerStore),
-//            'FLockerStore' => new LockerManager($fLockerStore),
             'PdoLockerStore' => new LockerManager($pdoLockerStore),
+            'RedisLockerStore' => new LockerManager($redisLockerStore),
+            'FLockerStore' => new LockerManager($fLockerStore),
         ];
     }
 
@@ -49,73 +52,108 @@ class LockerManagerTest extends TestCase
         }
     }
 
-//    /**
-//     * @test
-//     * @expectedException \LockerManager\Infrastructure\Exception\ExistingKeyException
-//     */
-//    public function it_should_throw_ExistingKeyException_if_try_to_acquire_an_existing_key_with_RedisLockerStore()
-//    {
-//        $lock = new Lock(
-//            'Existing Lock',
-//            'simple payload'
-//        );
-//
-//        $this->lockerManagers['RedisLockerStore']->acquire($lock);
-//        $this->lockerManagers['RedisLockerStore']->acquire($lock);
-//    }
-//
-//    /**
-//     * @test
-//     * @expectedException \LockerManager\Infrastructure\Exception\ExistingKeyException
-//     */
-//    public function it_should_throw_ExistingKeyException_if_try_to_acquire_an_existing_key_with_FLockerStore()
-//    {
-//        $lock = new Lock(
-//            'Existing Lock',
-//            'simple payload'
-//        );
-//
-//        $this->lockerManagers['FLockerStore']->acquire($lock);
-//        $this->lockerManagers['FLockerStore']->acquire($lock);
-//    }
-//
-//    /**
-//     * @test
-//     * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
-//     */
-//    public function it_should_throw_NotExistingKeyException_if_try_to_delete_an_not_existing_key_with_RedisLockerStore()
-//    {
-//        $this->lockerManagers['RedisLockerStore']->delete('not-existing-key');
-//    }
-//
-//    /**
-//     * @test
-//     * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
-//     */
-//    public function it_should_throw_NotExistingKeyException_if_try_to_delete_an_not_existing_key_with_FLockerStore()
-//    {
-//        $this->lockerManagers['FLockerStore']->delete('not-existing-key');
-//    }
-//
-//    /**
-//     * @test
-//     * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
-//     */
-//    public function it_should_throw_NotExistingKeyException_if_try_to_get_an_not_existing_key_with_RedisLockerStore()
-//    {
-//        $this->lockerManagers['RedisLockerStore']->get('not-existing-key');
-//    }
-//
-//    /**
-//     * @test
-//     * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
-//     */
-//    public function it_should_throw_NotExistingKeyException_if_try_to_get_an_not_existing_key_with_FLockerStore()
-//    {
-//        $this->lockerManagers['FLockerStore']->get('not-existing-key');
-//    }
+    /**
+     * @test
+     * @expectedException \PDOException
+     */
+    public function it_should_throw_ExistingKeyException_if_try_to_acquire_an_existing_key_with_PdoLockerStore()
+    {
+        $lock = new Lock(
+            'Existing Lock',
+            'simple payload'
+        );
 
+        $this->lockerManagers['PdoLockerStore']->acquire($lock);
+        $this->lockerManagers['PdoLockerStore']->acquire($lock);
+    }
 
+    /**
+     * @test
+     * @expectedException \LockerManager\Infrastructure\Exception\ExistingKeyException
+     */
+    public function it_should_throw_ExistingKeyException_if_try_to_acquire_an_existing_key_with_RedisLockerStore()
+    {
+        $lock = new Lock(
+            'Existing Lock',
+            'simple payload'
+        );
+
+        $this->lockerManagers['RedisLockerStore']->acquire($lock);
+        $this->lockerManagers['RedisLockerStore']->acquire($lock);
+    }
+
+    /**
+     * @test
+     * @expectedException \LockerManager\Infrastructure\Exception\ExistingKeyException
+     */
+    public function it_should_throw_ExistingKeyException_if_try_to_acquire_an_existing_key_with_FLockerStore()
+    {
+        $lock = new Lock(
+            'Existing Lock',
+            'simple payload'
+        );
+
+        $this->lockerManagers['FLockerStore']->acquire($lock);
+        $this->lockerManagers['FLockerStore']->acquire($lock);
+    }
+
+    /**
+     * @test
+     * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
+     */
+    public function it_should_throw_NotExistingKeyException_if_try_to_delete_an_not_existing_key_with_PdoLockerStore()
+    {
+        $this->lockerManagers['PdoLockerStore']->delete('not-existing-key');
+    }
+
+    /**
+     * @test
+     * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
+     */
+    public function it_should_throw_NotExistingKeyException_if_try_to_delete_an_not_existing_key_with_RedisLockerStore()
+    {
+        $this->lockerManagers['RedisLockerStore']->delete('not-existing-key');
+    }
+
+    /**
+     * @test
+     * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
+     */
+    public function it_should_throw_NotExistingKeyException_if_try_to_delete_an_not_existing_key_with_FLockerStore()
+    {
+        $this->lockerManagers['FLockerStore']->delete('not-existing-key');
+    }
+
+    /**
+     * @test
+     * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
+     */
+    public function it_should_throw_NotExistingKeyException_if_try_to_get_an_not_existing_key_with_PdoLockerStore()
+    {
+        $this->lockerManagers['PdoLockerStore']->get('not-existing-key');
+    }
+
+    /**
+     * @test
+     * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
+     */
+    public function it_should_throw_NotExistingKeyException_if_try_to_get_an_not_existing_key_with_RedisLockerStore()
+    {
+        $this->lockerManagers['RedisLockerStore']->get('not-existing-key');
+    }
+
+    /**
+     * @test
+     * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
+     */
+    public function it_should_throw_NotExistingKeyException_if_try_to_get_an_not_existing_key_with_FLockerStore()
+    {
+        $this->lockerManagers['FLockerStore']->get('not-existing-key');
+    }
+
+    /**
+     * @test
+     */
     public function it_should_write_and_update_and_get_and_delete_a_lock()
     {
         /** @var LockerManager $lockerManager */
@@ -156,7 +194,9 @@ class LockerManagerTest extends TestCase
         }
     }
 
-
+    /**
+     * @test
+     */
     public function it_should_return_the_correct_lock_count()
     {
         /** @var LockerManager $lockerManager */
@@ -192,21 +232,30 @@ class LockerManagerTest extends TestCase
         }
     }
 
-//    /**
-//     * @test
-//     * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
-//     */
-//    public function it_should_throw_NotExistingKeyException_if_try_to_update_an_not_existing_key_with_RedisLockerStore()
-//    {
-//        $this->lockerManagers['RedisLockerStore']->update('not-existing-key', 'payload');
-//    }
-//
-//    /**
-//     * @test
-//     * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
-//     */
-//    public function it_should_throw_NotExistingKeyException_if_try_to_update_an_not_existing_key_with_FLockerStore()
-//    {
-//        $this->lockerManagers['FLockerStore']->update('not-existing-key', 'payload');
-//    }
+    /**
+     * @test
+     * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
+     */
+    public function it_should_throw_NotExistingKeyException_if_try_to_update_an_not_existing_key_with_PdoLockerStore()
+    {
+        $this->lockerManagers['PdoLockerStore']->update('not-existing-key', 'payload');
+    }
+
+    /**
+     * @test
+     * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
+     */
+    public function it_should_throw_NotExistingKeyException_if_try_to_update_an_not_existing_key_with_RedisLockerStore()
+    {
+        $this->lockerManagers['RedisLockerStore']->update('not-existing-key', 'payload');
+    }
+
+    /**
+     * @test
+     * @expectedException \LockerManager\Infrastructure\Exception\NotExistingKeyException
+     */
+    public function it_should_throw_NotExistingKeyException_if_try_to_update_an_not_existing_key_with_FLockerStore()
+    {
+        $this->lockerManagers['FLockerStore']->update('not-existing-key', 'payload');
+    }
 }

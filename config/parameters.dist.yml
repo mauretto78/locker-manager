@@ -1,0 +1,8 @@
+pdo:
+  driver: 'mysql'
+  host: 'localhost'
+  username: 'root'
+  password: ~
+  database: 'locker'
+  port: '3306'
+  options: ~
